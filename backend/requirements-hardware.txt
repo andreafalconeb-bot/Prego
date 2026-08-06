@@ -1,0 +1,15 @@
+# Optional dependencies for connecting real hardware. Not required to run the
+# system with the mock ALPR engine / dummy printer (see README "Conectar
+# hardware real").
+
+# Real IP/USB camera frame grabbing (RTSP/HTTP streams) for the camera worker
+opencv-python-headless==4.10.0.84
+
+# ESC/POS thermal ticket printer (network or USB)
+python-escpos==3.1
+pyusb==1.2.1
+
+# OpenALPR python bindings. OpenALPR itself (the native library + runtime_data)
+# must be installed separately on the host - this pip package alone is not
+# enough. See app/services/alpr/openalpr_engine.py for setup notes.
+# openalpr

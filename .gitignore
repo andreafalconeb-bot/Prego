@@ -1,0 +1,19 @@
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/data/
+backend/storage/photos/*
+!backend/storage/photos/.gitkeep
+backend/*.db
+*.pyc
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
