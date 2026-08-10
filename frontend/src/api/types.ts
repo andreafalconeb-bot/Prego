@@ -98,3 +98,20 @@ export interface DashboardData {
   reentries_today: number;
   anomalies_today: number;
 }
+
+export interface VideoFrameCandidate {
+  plate: string;
+  confidence: number;
+}
+
+export interface VideoAnalyzeFrame {
+  frame_index: number;
+  timestamp_seconds: number | null;
+  thumbnail_data_url: string;
+  candidates: VideoFrameCandidate[];
+}
+
+export interface VideoAnalyzeResponse {
+  frames: VideoAnalyzeFrame[];
+  engine_note: string;
+}

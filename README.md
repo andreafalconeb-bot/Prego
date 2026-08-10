@@ -18,6 +18,7 @@ térmica reales sin rediseñar nada — ver [Conectar hardware real](#conectar-h
 - [Arquitectura](#arquitectura)
 - [Poner en marcha (desarrollo)](#poner-en-marcha-desarrollo)
 - [Uso de la consola](#uso-de-la-consola)
+- [Probar el reconocimiento con un video](#probar-el-reconocimiento-con-un-video)
 - [Conectar hardware real](#conectar-hardware-real)
 - [Auditoría de tickets](#auditoría-de-tickets)
 - [Variables de entorno](#variables-de-entorno)
@@ -135,6 +136,37 @@ Abre `http://localhost:5173` e inicia sesión con `admin` / `admin123`.
   cobró sin una entrada correspondiente.
 - **Configuración**: nombre del estacionamiento, minutos del umbral de
   reingreso, y datos de la impresora térmica.
+
+## Probar el reconocimiento con un video
+
+Dentro de **Simulador de cámara** hay una sección "Analizar video": subís un
+video corto (por ejemplo grabado con el celular apuntando a un auto) y el
+sistema extrae varios fotogramas e intenta leer la placa automáticamente,
+usando OpenCV (para ubicar la zona con forma de placa) + Tesseract OCR de
+código abierto — implementado en
+`backend/app/services/alpr/tesseract_engine.py` y
+`backend/app/services/video_service.py`.
+
+Es importante entender qué es y qué no es esta función:
+
+- **Es** una forma de probar la idea de "lectura automática" con tus propios
+  videos antes de invertir en una cámara ALPR, sin necesitar hardware.
+- **No es** tan precisa como una cámara ALPR entrenada específicamente para
+  placas (como OpenALPR, ver más abajo): un OCR genérico acierta bien con
+  buena luz, ángulo de frente y buena resolución, y falla más con reflejos,
+  ángulos pronunciados o poca nitidez.
+- Por eso la consola siempre te muestra varios fotogramas con sus lecturas
+  candidatas (y su nivel de confianza) para que elijas y confirmes vos cuál
+  usar — nunca se manda una placa directamente sin que la veas.
+
+Requiere el binario `tesseract-ocr` instalado en el servidor (no alcanza con
+el paquete de Python `pytesseract`):
+
+```bash
+apt-get install tesseract-ocr tesseract-ocr-spa   # español; agregá el paquete de tu idioma
+```
+
+Si no está instalado, la consola muestra un aviso claro en vez de fallar.
 
 ## Conectar hardware real
 

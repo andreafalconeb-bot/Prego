@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import models
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, cameras, dashboard, events, reports, settings as settings_router, tickets, visits
+from .routers import alpr, auth, cameras, dashboard, events, reports, settings as settings_router, tickets, visits
 from .security import hash_password
 from .services.settings_service import get_settings
 
@@ -67,6 +67,7 @@ app.include_router(settings_router.router)
 app.include_router(reports.router)
 app.include_router(tickets.router)
 app.include_router(dashboard.router)
+app.include_router(alpr.router)
 
 
 @app.get("/api/health")

@@ -1,9 +1,7 @@
 # Optional dependencies for connecting real hardware. Not required to run the
 # system with the mock ALPR engine / dummy printer (see README "Conectar
-# hardware real").
-
-# Real IP/USB camera frame grabbing (RTSP/HTTP streams) for the camera worker
-opencv-python-headless==4.10.0.84
+# hardware real"). opencv-python-headless is already in requirements.txt
+# (used by the video-upload recognition feature too), so it's not repeated here.
 
 # ESC/POS thermal ticket printer (network or USB)
 python-escpos==3.1

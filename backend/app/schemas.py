@@ -149,3 +149,21 @@ class DashboardOut(BaseModel):
     tickets_printed_today: int
     reentries_today: int
     anomalies_today: int
+
+
+# ---------- Video plate-reading (testing/demo feature) ----------
+class VideoFrameCandidate(BaseModel):
+    plate: str
+    confidence: float
+
+
+class VideoAnalyzeFrame(BaseModel):
+    frame_index: int
+    timestamp_seconds: float | None
+    thumbnail_data_url: str
+    candidates: list[VideoFrameCandidate]
+
+
+class VideoAnalyzeResponse(BaseModel):
+    frames: list[VideoAnalyzeFrame]
+    engine_note: str

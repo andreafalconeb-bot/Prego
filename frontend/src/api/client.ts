@@ -6,6 +6,7 @@ import type {
   Settings,
   TicketCharge,
   User,
+  VideoAnalyzeResponse,
   Visit,
   VisitDetail,
 } from "./types";
@@ -150,6 +151,28 @@ export async function detectPlate(payload: DetectPayload): Promise<DetectionEven
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${API_BASE_URL}/api/events/detect`, { method: "POST", headers, body: form });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? detail;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}
+
+// ---------- Video plate-reading (testing/demo feature) ----------
+export async function analyzeVideo(video: File): Promise<VideoAnalyzeResponse> {
+  const form = new FormData();
+  form.set("video", video);
+
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_BASE_URL}/api/alpr/analyze-video`, { method: "POST", headers, body: form });
   if (!res.ok) {
     let detail = res.statusText;
     try {
