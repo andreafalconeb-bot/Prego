@@ -1,0 +1,297 @@
+:root {
+  --azul-mobil: #0b1f3a;
+  --amarillo-mobil: #ffcc00;
+  --gris-borde: #d8dde3;
+  --rojo: #b3261e;
+  --verde: #1e7a34;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f4f5f7;
+  color: #1a1a1a;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--gris-borde);
+  background: white;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boton-primario {
+  background: var(--azul-mobil);
+  color: white;
+  border: none;
+}
+
+input,
+select {
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--gris-borde);
+  border-radius: 6px;
+}
+
+.pantalla-centrada {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.tarjeta-login {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tarjeta-login h1 {
+  margin: 0;
+  color: var(--azul-mobil);
+}
+
+.subtitulo {
+  color: #666;
+  margin-top: -0.5rem;
+}
+
+.tarjeta-login label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.mensaje-error {
+  color: var(--rojo);
+  font-size: 0.9rem;
+}
+
+.mensaje-advertencia {
+  background: #fff4d6;
+  border: 1px solid var(--amarillo-mobil);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout-header {
+  background: var(--azul-mobil);
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.marca {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.estado-conexion {
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.estado-conexion.sin-conexion {
+  color: var(--amarillo-mobil);
+}
+
+.badge-pendientes {
+  background: var(--amarillo-mobil);
+  color: var(--azul-mobil);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-weight: 600;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.layout-nav {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  border-bottom: 1px solid var(--gris-borde);
+  overflow-x: auto;
+}
+
+.layout-nav a {
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--azul-mobil);
+  white-space: nowrap;
+}
+
+.layout-nav a.active {
+  background: var(--azul-mobil);
+  color: white;
+}
+
+.layout-main {
+  flex: 1;
+  padding: 1rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.encabezado-seccion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.lista-retailers {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lista-retailers li {
+  background: white;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid var(--gris-borde);
+}
+
+.lista-retailers li.retailer-vencido {
+  border-left: 4px solid var(--amarillo-mobil);
+}
+
+.retailer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.detalle-visita {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.visita-wizard {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.paso {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.tabla-conteo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tabla-conteo th,
+.tabla-conteo td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--gris-borde);
+}
+
+.tabla-conteo input[type='number'] {
+  width: 80px;
+}
+
+.fila-agregar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fila-pedido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--gris-borde);
+}
+
+.campo-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.etiqueta-alerta {
+  color: var(--rojo);
+  font-weight: 600;
+}
+
+.tarjeta-form {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+.grid-form label,
+.tarjeta-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
