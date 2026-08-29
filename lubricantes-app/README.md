@@ -69,42 +69,56 @@ orden cuando vuelve la red.
 
 ## Poner en marcha
 
+Lo único que no se puede automatizar es crear la cuenta/proyecto de
+Supabase y la cuenta de Resend — son tuyos, requieren login. Todo lo demás
+(aplicar el esquema, configurar secretos, desplegar la función, cargar
+datos de ejemplo) está en dos scripts para no ir comando por comando.
+
 ### 1. Crear el proyecto de Supabase
 
-En [supabase.com](https://supabase.com), creá un proyecto nuevo. Después,
-con la [CLI de Supabase](https://supabase.com/docs/guides/cli):
+En [supabase.com](https://supabase.com) → "New Project". Anotá el
+**project ref** (Project Settings → General → Reference ID) y, de
+Project Settings → API, la **URL**, la **anon key** y la
+**service_role key**.
+
+### 2. Correr el setup
 
 ```bash
 cd lubricantes-app
-npx supabase login
-npx supabase link --project-ref TU_PROJECT_REF
-npx supabase db push        # aplica supabase/migrations/0001_init.sql
+RESEND_API_KEY=tu_api_key REMITENTE_EMAIL=reposicion@tudominio.com \
+  ./scripts/setup.sh TU_PROJECT_REF
 ```
 
-### 2. Crear los primeros usuarios
+`RESEND_API_KEY`/`REMITENTE_EMAIL` son opcionales al correrlo — si no los
+tenés todavía, el script te muestra el comando exacto para configurarlos
+después. El script hace, en orden: login a Supabase, link del proyecto,
+`db push` (aplica `supabase/migrations/0001_init.sql`), configura los
+secrets de la Edge Function, y la despliega.
 
-Los usuarios se crean en Supabase Auth (Dashboard → Authentication → Users,
-o `supabase.auth.admin.createUser`). El trigger `handle_new_user` crea el
-`profile` automáticamente. Para asignar el rol admin al crear el usuario,
-pasá en `raw_user_meta_data`: `{"nombre_completo": "...", "role": "admin"}`
-(por defecto el rol es `asesor`).
+### 3. Cargar datos de demostración (opcional)
 
-### 3. Configurar el envío de correos
-
-La Edge Function usa [Resend](https://resend.com) (podés cambiarla por otro
-proveedor editando `supabase/functions/send-visit-email/index.ts`):
+Crea dos usuarios (admin y asesor), el catálogo de ejemplo (los mismos
+productos y mínimos del documento de negocio: aceite de motor, ATF Dexron
+III y IV) y un retailer con compromisos ya armados — útil para probar la
+app de punta a punta sin cargar todo a mano primero.
 
 ```bash
-npx supabase secrets set RESEND_API_KEY=tu_api_key
-npx supabase secrets set REMITENTE_EMAIL=reposicion@tudominio.com
-npx supabase functions deploy send-visit-email
+cd web
+npm install
+SUPABASE_URL=https://TU_PROJECT_REF.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key \
+  npm run seed
 ```
+
+Es idempotente (se puede correr de nuevo sin duplicar nada). Al final
+imprime el usuario/contraseña de demostración — cambiar esa contraseña
+antes de usar el sistema con datos reales.
 
 ### 4. Levantar la app web
 
 ```bash
 cd web
-npm install
+npm install    # si no lo corriste ya en el paso anterior
 cp .env.example .env.local   # completá VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
@@ -144,12 +158,36 @@ pedido/despachado) no cambia.
 
 ## Pruebas hechas
 
+```bash
+cd web
+npm run test     # 20 tests: cálculo de ventas/reposición, GPS, cola offline
+npm run build    # typecheck + build de producción
+```
+
 - El esquema SQL fue validado corriéndolo contra un Postgres real (extensión,
   tipos, triggers, RLS, vista pública, inserciones de punta a punta).
+- `src/lib/reposicion.test.ts` y `src/lib/geo.test.ts`: la lógica de cálculo
+  de ventas, sugerencia de reposición y verificación GPS, con los ejemplos
+  concretos del documento de negocio (aceite de motor mín. 7, ATF Dexron III
+  mín. 3, ATF Dexron IV mín. 2).
+- `src/lib/sync.test.ts`: la cola de sincronización offline de punta a
+  punta, con IndexedDB real (`fake-indexeddb`) y un backend de Supabase
+  simulado — cola sin conexión, sincronización FIFO, una fila creada y
+  actualizada offline en el mismo lote, y una mutación que falla sin
+  bloquear a las demás. Esta prueba encontró y permitió corregir dos bugs
+  reales antes de que llegaran a un dispositivo:
+  1. Una visita creada y luego cerrada offline (insert + update) generaba
+     dos entradas de cola con la misma clave, y la segunda fallaba.
+  2. El orden de la cola se basaba en un timestamp de milisegundo
+     (`creado_en`); dos mutaciones encoladas en el mismo milisegundo (algo
+     que pasa fácil al cerrar una visita) podían procesarse en el orden
+     equivocado. Se reemplazó por un contador estrictamente creciente
+     (`orden`, campo `MutacionPendiente.orden` en `src/lib/db.ts`).
 - El frontend compila sin errores de tipos (`npm run build`) y fue probado
   visualmente (pantalla de login, manejo de errores) con un servidor de
   desarrollo real.
-- Falta por hacer antes de producción: probar el flujo completo de una
-  visita contra un proyecto de Supabase real (con RLS aplicando sobre
-  usuarios reales), y probar la sincronización offline→online en un
-  dispositivo físico.
+- Falta por hacer antes de producción — esto sí requiere una cuenta de
+  Supabase/Resend real y un dispositivo físico, no se puede automatizar
+  desde acá: probar el flujo completo de una visita contra un proyecto de
+  Supabase real (con RLS aplicando sobre usuarios reales), y probar la
+  sincronización offline→online con GPS real en el dispositivo del asesor.

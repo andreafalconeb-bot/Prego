@@ -96,26 +96,38 @@ export async function precargarDatosRuta(asesorId: string): Promise<void> {
 /** Encola una escritura para sincronizar con Supabase. Genera el id del
  * registro localmente (uuid) para que las filas creadas offline puedan
  * referenciarse entre sí (ej. inventario_contado.visita_id) antes de que
- * exista conexión. Intenta sincronizar de inmediato si hay red. */
+ * exista conexión. Intenta sincronizar de inmediato si hay red.
+ *
+ * El id de la fila (payload.id) y el id de la entrada en la cola son
+ * intencionalmente distintos: una misma visita suele encolar un insert y
+ * después un update (ej. cerrarla) con el mismo payload.id, y ambas
+ * entradas de la cola deben poder coexistir hasta sincronizarse. */
+// Contador para el orden de procesamiento de la cola (ver el comentario en
+// MutacionPendiente.orden). Arranca en Date.now() para que, tras recargar
+// la app, las mutaciones nuevas ordenen después de las de la sesión
+// anterior sin tener que persistir el contador.
+let siguienteOrden = Date.now()
+
 export async function encolarMutacion(
   tabla: TablaSincronizable,
   operacion: 'insert' | 'update',
   payload: Record<string, unknown>,
 ): Promise<string> {
   const db = await getDb()
-  const id = (payload.id as string | undefined) ?? crypto.randomUUID()
+  const filaId = (payload.id as string | undefined) ?? crypto.randomUUID()
   const mutacion: MutacionPendiente = {
-    id,
+    id: crypto.randomUUID(),
     tabla,
     operacion,
-    payload: { ...payload, id },
+    payload: { ...payload, id: filaId },
     creado_en: new Date().toISOString(),
+    orden: siguienteOrden++,
     intentos: 0,
   }
   await db.add('cola_mutaciones', mutacion)
   notificar()
   if (navigator.onLine) void sincronizar()
-  return id
+  return filaId
 }
 
 let sincronizando = false
@@ -129,7 +141,7 @@ export async function sincronizar(): Promise<void> {
   sincronizando = true
   try {
     const db = await getDb()
-    const pendientes = await db.getAllFromIndex('cola_mutaciones', 'por_fecha')
+    const pendientes = await db.getAllFromIndex('cola_mutaciones', 'por_orden')
     for (const m of pendientes) {
       try {
         // `m.tabla` es dinámico (una de varias tablas posibles), así que el

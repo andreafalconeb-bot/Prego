@@ -20,6 +20,12 @@ export interface MutacionPendiente {
   operacion: 'insert' | 'update'
   payload: Record<string, unknown>
   creado_en: string
+  /** Orden de procesamiento (FIFO), independiente de `creado_en`: dos
+   * mutaciones encoladas en el mismo milisegundo tendrían el mismo
+   * timestamp, y el orden de IndexedDB entre claves de índice iguales no
+   * está garantizado — por eso el orden real se decide por este contador
+   * estrictamente creciente, no por la fecha. */
+  orden: number
   intentos: number
   ultimo_error?: string
 }
@@ -50,7 +56,7 @@ interface LubricantesDB extends DBSchema {
   cola_mutaciones: {
     key: string
     value: MutacionPendiente
-    indexes: { por_fecha: string }
+    indexes: { por_orden: number }
   }
 }
 
@@ -65,7 +71,7 @@ export function getDb() {
         db.createObjectStore('compromisos', { keyPath: 'id' }).createIndex('por_retailer', 'retailer_id')
         db.createObjectStore('despachos', { keyPath: 'id' }).createIndex('por_retailer', 'retailer_id')
         db.createObjectStore('ultima_visita', { keyPath: 'retailer_id' })
-        db.createObjectStore('cola_mutaciones', { keyPath: 'id' }).createIndex('por_fecha', 'creado_en')
+        db.createObjectStore('cola_mutaciones', { keyPath: 'id' }).createIndex('por_orden', 'orden')
       },
     })
   }
