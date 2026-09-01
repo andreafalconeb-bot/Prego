@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <!-- Placeholder genérico de gorra, SIN marca. Reemplazar por el PNG real
+       de la gorra VP Racing (con transparencia) en public/cap.png y cambiar
+       la referencia en src/components/PhotoBooth.tsx -->
+  <path d="M10 90 Q100 20 190 90 L190 100 Q100 60 10 100 Z" fill="#c0392b" stroke="#7f1d1d" stroke-width="2"/>
+  <path d="M100 20 Q150 20 190 90 Q150 70 100 65 Z" fill="#e74c3c" stroke="#7f1d1d" stroke-width="2"/>
+  <circle cx="100" cy="35" r="6" fill="#7f1d1d"/>
+  <text x="100" y="88" font-family="sans-serif" font-size="10" fill="#fff" text-anchor="middle">TU LOGO</text>
+</svg>

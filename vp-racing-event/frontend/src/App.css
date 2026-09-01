@@ -1,0 +1,196 @@
+.app {
+  text-align: left;
+  padding: 0 24px 48px;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.nav a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav a.active {
+  color: var(--accent);
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.hint {
+  font-size: 14px;
+  opacity: 0.8;
+  margin: 8px 0;
+}
+
+.error {
+  color: #d92626;
+  font-size: 14px;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.names-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--mono);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  margin: 12px 0;
+}
+
+/* Torneo */
+.champion {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.bracket {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.bracket-round {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.match-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--code-bg);
+}
+
+.match-card.bye {
+  opacity: 0.75;
+}
+
+.match-card p {
+  margin: 4px 0;
+}
+
+.match-card .winner {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.match-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.match-form input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.match-form button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+/* Fotobooth */
+.camera-capture {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.camera-preview {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  background: black;
+}
+
+.file-fallback {
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.file-fallback input {
+  display: none;
+}
+
+.cap-overlay-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  touch-action: none;
+}
+
+.cap-overlay-photo {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+.cap-overlay-cap {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.style-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.result-image {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  margin-top: 12px;
+}
