@@ -1,0 +1,335 @@
+openapi: 3.1.0
+info:
+  title: Stock & Reorden — Bridge API
+  version: 1.0.0
+  license: { name: Propietario, identifier: LicenseRef-Proprietary }
+  description: |
+    Puente entre la app del taller (PWA offline-first) y la tienda B2B de la distribuidora.
+    Implementado como Supabase Edge Functions detrás de un dominio propio (api.<distribuidora>.com),
+    que reescribe /api/v1/* → /functions/v1/*.
+
+    Convenciones:
+      - Dinero en USD como número decimal con 2–4 decimales; VES siempre acompañado de la tasa usada.
+      - Errores con forma única `{ "error": { "code", "message", "details" } }`.
+      - Toda operación de escritura acepta `idempotency_key` (o header `Idempotency-Key`).
+servers:
+  - url: https://api.example-distribuidora.com/api/v1
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/token:
+    post:
+      operationId: issueToken
+      summary: Emite tokens de acceso
+      description: |
+        Dos flujos:
+        * `activation_code` — onboarding del teléfono del taller. El vendedor genera un código de
+          8 caracteres (o QR) desde el backoffice; el taller lo escanea y define un PIN de 4 dígitos.
+          Devuelve una sesión Supabase (access + refresh). El refresh token mantiene el teléfono
+          logueado meses: el mecánico no vuelve a "iniciar sesión".
+        * `client_credentials` — integración servidor-a-servidor (la tienda B2B, el ERP). Token de
+          15 minutos con scopes.
+        * `refresh_token` — renovación.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ActivationGrant'
+                - $ref: '#/components/schemas/ClientCredentialsGrant'
+                - $ref: '#/components/schemas/RefreshGrant'
+            examples:
+              activacion:
+                value: { grant_type: activation_code, code: "K7P2-M9QX", pin: "4821", device_id: "and-3f9c1b", device_name: "Samsung A14 mostrador" }
+              servidor:
+                value: { grant_type: client_credentials, client_id: "b2b-store", client_secret: "•••", scope: "orders:write catalog:write" }
+      responses:
+        '200':
+          description: Token emitido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+              example:
+                access_token: "eyJhbGciOi..."
+                token_type: "bearer"
+                expires_in: 3600
+                refresh_token: "v1.Mr9...."
+                retailer: { id: "1b0c...", trade_name: "Lubricentro El Pistón", role: "owner" }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429':
+          description: Demasiados intentos (5 por código / 15 min). El código se bloquea tras 10 fallos.
+
+  /b2b/catalog-sync:
+    get:
+      operationId: catalogSync
+      summary: Catálogo B2B con precios USD/VES y disponibilidad (delta)
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: Cursor `next_since` de la respuesta anterior. Sin él → catálogo completo.
+          schema: { type: string, format: date-time }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Cambios del catálogo
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogSyncResponse' }
+              example:
+                rate: { date: "2026-10-22", ves_per_usd: 215.5, source: "BCV" }
+                full: false
+                next_since: "2026-10-22T11:04:10.512Z"
+                items:
+                  - product_id: "8a1e..."
+                    sku: "MOB-S2000-1030-QT"
+                    brand: "Mobil"
+                    name: "Mobil Super 2000 10W-30 1 qt"
+                    category: "motor_oil"
+                    viscosity: "10W-30"
+                    base_uom: "unit"
+                    volume_l: 0.946
+                    units_per_case: 12
+                    barcodes: [{ barcode: "0071924XXXXXX", pack_units: 1 }]
+                    price_usd: 5.10
+                    price_ves: 1099.05
+                    available: true
+                    stock_band: "high"
+                    min_order_units: 12
+                    updated_at: "2026-10-22T11:04:10.512Z"
+        '304': { description: Sin cambios }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /b2b/create-auto-order:
+    post:
+      operationId: createAutoOrder
+      summary: Crea el pedido de reposición "1-Clic" en la tienda B2B
+      description: |
+        El servidor re-cotiza cada línea con el catálogo vigente (los precios del cliente se ignoran),
+        redondea a múltiplos de caja, congela la tasa del día y marca las cantidades como "en camino"
+        (on_order) para que la alerta no vuelva a dispararse. Idempotente por `idempotency_key`:
+        repetir la llamada devuelve el mismo pedido con `replayed: true` y HTTP 200.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrderRequest' }
+            example:
+              retailer_id: "1b0c6c2e-6c55-4f0e-9a2b-0d3a3b1f6a10"
+              idempotency_key: "ord-and-3f9c1b-20261022-0007"
+              trigger: "auto_alert"
+              payment_currency: "USD"
+              notes: "Entregar antes de las 11am"
+              lines:
+                - product_id: "8a1e2f4c-1b6d-4c55-9a33-2f1b7c0e5d21"
+                  qty_units: 24
+                  suggested_units: 30
+                  reason: { abc: "A", on_hand: 7, on_order: 0, reorder_point: 16.6, order_up_to: 40 }
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreateOrderResponse' }
+              example:
+                order:
+                  id: "5e0f..."
+                  status: "pending_rep"
+                  b2b_order_ref: null
+                  rate_date: "2026-10-22"
+                  ves_per_usd: 215.5
+                  subtotal_usd: 122.40
+                  subtotal_ves: 26377.20
+                  lines:
+                    - { product_id: "8a1e...", distributor_sku: "MOB-S2000-1030-QT", qty_units: 24, unit_price_usd: 5.10 }
+                unavailable: []
+                rep_whatsapp_url: "https://wa.me/58412XXXXXXX?text=Pedido%20app..."
+        '200': { description: 'Repetición idempotente; mismo cuerpo con replayed=true' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+
+  /b2b/webhooks:
+    post:
+      operationId: receiveStoreWebhook
+      summary: Webhook entrante desde la tienda B2B (estado del pedido)
+      security: []
+      parameters:
+        - name: X-Signature
+          in: header
+          required: true
+          description: "`t=<unix>,v1=<hex HMAC-SHA256(secret, t + '.' + body)>`"
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookEvent' }
+            example:
+              event_id: "evt_01JB3K..."
+              type: "order.fulfilled"
+              created_at: "2026-10-22T15:20:00Z"
+              data:
+                external_ref: "5e0f..."
+                order_ref: "PED-104233"
+                lines: [{ sku: "MOB-S2000-1030-QT", fulfilled_qty: 24 }]
+      responses:
+        '200': { description: Procesado (o duplicado ignorado) }
+        '401': { description: Firma inválida o fuera de ventana de 5 min }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, examples: [validation_error, forbidden, not_linked, no_rate, nothing_available] }
+            message: { type: string }
+            details: {}
+    ActivationGrant:
+      type: object
+      required: [grant_type, code, pin, device_id]
+      properties:
+        grant_type: { const: activation_code }
+        code: { type: string, pattern: '^[A-Z0-9]{4}-[A-Z0-9]{4}$' }
+        pin: { type: string, pattern: '^[0-9]{4}$' }
+        device_id: { type: string, maxLength: 64 }
+        device_name: { type: string, maxLength: 80 }
+    ClientCredentialsGrant:
+      type: object
+      required: [grant_type, client_id, client_secret]
+      properties:
+        grant_type: { const: client_credentials }
+        client_id: { type: string }
+        client_secret: { type: string }
+        scope: { type: string }
+    RefreshGrant:
+      type: object
+      required: [grant_type, refresh_token]
+      properties:
+        grant_type: { const: refresh_token }
+        refresh_token: { type: string }
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token: { type: string }
+        token_type: { const: bearer }
+        expires_in: { type: integer }
+        refresh_token: { type: string }
+        scope: { type: string }
+        retailer:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            trade_name: { type: string }
+            role: { enum: [owner, counter] }
+    CatalogItem:
+      type: object
+      required: [product_id, sku, name, units_per_case, price_usd, price_ves, available]
+      properties:
+        product_id: { type: string, format: uuid }
+        sku: { type: string }
+        brand: { type: string }
+        name: { type: string }
+        category: { type: string }
+        viscosity: { type: [string, 'null'] }
+        base_uom: { enum: [unit, liter] }
+        volume_l: { type: [number, 'null'] }
+        units_per_case: { type: integer }
+        barcodes:
+          type: array
+          items: { type: object, properties: { barcode: { type: string }, pack_units: { type: integer } } }
+        price_usd: { type: number }
+        price_ves: { type: number }
+        available: { type: boolean }
+        stock_band: { enum: [high, low, out, null] }
+        min_order_units: { type: integer }
+        updated_at: { type: string, format: date-time }
+    CatalogSyncResponse:
+      type: object
+      required: [rate, items, next_since, full]
+      properties:
+        rate:
+          type: object
+          properties:
+            date: { type: string, format: date }
+            ves_per_usd: { type: number }
+            source: { type: string }
+        items: { type: array, items: { $ref: '#/components/schemas/CatalogItem' } }
+        next_since: { type: [string, 'null'], format: date-time }
+        full: { type: boolean }
+    CreateOrderRequest:
+      type: object
+      required: [retailer_id, idempotency_key, trigger, payment_currency, lines]
+      properties:
+        retailer_id: { type: string, format: uuid }
+        idempotency_key: { type: string, minLength: 16, maxLength: 100 }
+        trigger: { enum: [auto_alert, manual, sales_rep] }
+        payment_currency: { enum: [USD, VES] }
+        notes: { type: string, maxLength: 500 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required: [product_id, qty_units]
+            properties:
+              product_id: { type: string, format: uuid }
+              qty_units: { type: number, exclusiveMinimum: 0, maximum: 10000 }
+              suggested_units: { type: number }
+              reason: { type: object, description: 'Explicación del algoritmo; se guarda para auditoría' }
+    CreateOrderResponse:
+      type: object
+      properties:
+        order:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            status: { enum: [draft, pending_rep, submitted, accepted, rejected, partially_fulfilled, fulfilled, delivered, cancelled, failed] }
+            b2b_order_ref: { type: [string, 'null'] }
+            rate_date: { type: string, format: date }
+            ves_per_usd: { type: number }
+            subtotal_usd: { type: number }
+            subtotal_ves: { type: number }
+            lines: { type: array, items: { type: object } }
+        unavailable: { type: array, items: { type: string } }
+        rep_whatsapp_url: { type: [string, 'null'] }
+        replayed: { type: boolean }
+    WebhookEvent:
+      type: object
+      required: [event_id, type, data]
+      properties:
+        event_id: { type: string }
+        type: { enum: [order.accepted, order.rejected, order.partially_fulfilled, order.fulfilled, order.cancelled, catalog.updated] }
+        created_at: { type: string, format: date-time }
+        data:
+          type: object
+          properties:
+            external_ref: { type: string, format: uuid, description: id del pedido en el puente }
+            order_ref: { type: string }
+            lines:
+              type: array
+              items: { type: object, properties: { sku: { type: string }, fulfilled_qty: { type: number } } }

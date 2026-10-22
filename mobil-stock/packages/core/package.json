@@ -1,0 +1,10 @@
+{
+  "name": "@stock-reorden/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Motor de inventario: ABC, punto de reorden, alertas y propuesta de pedido con presupuesto",
+  "exports": { ".": "./src/index.ts" },
+  "engines": { "node": ">=22.18" },
+  "scripts": { "test": "node --test test/*.test.ts" }
+}
